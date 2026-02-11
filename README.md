@@ -67,9 +67,9 @@ if err != nil {
     return nil, err
 }
 
-// Call the String method to unparsed AST into a SQL string
+// Format AST back into a SQL string
 for _, stmt := range statements {
-  fmt.Println(stmt.String())
+  fmt.Println(clickhouse.Format(stmt))
 }
 ```
 

@@ -77,7 +77,7 @@ func TestFind_FirstMatch(t *testing.T) {
 
 	funcExpr, ok := found.(*FunctionExpr)
 	require.True(t, ok, "Found node should be a FunctionExpr")
-	require.Equal(t, "COUNT", funcExpr.Name.String(), "Should find the COUNT function")
+	require.Equal(t, "COUNT", Format(funcExpr.Name), "Should find the COUNT function")
 }
 
 func TestFindAll_MultipleMatches(t *testing.T) {
@@ -98,7 +98,7 @@ func TestFindAll_MultipleMatches(t *testing.T) {
 	funcNames := make([]string, len(functions))
 	for i, fn := range functions {
 		funcExpr := fn.(*FunctionExpr)
-		funcNames[i] = funcExpr.Name.String()
+		funcNames[i] = Format(funcExpr.Name)
 	}
 
 	require.Contains(t, funcNames, "COUNT")
@@ -115,14 +115,14 @@ func TestWalk_TableIdentifierRewriting(t *testing.T) {
 	// Rewrite table names
 	Walk(stmts[0], func(node Expr) bool {
 		if tableId, ok := node.(*TableIdentifier); ok {
-			if tableId.Table.String() == "group_by_all" {
+			if Format(tableId.Table) == "group_by_all" {
 				tableId.Table = &Ident{Name: "hack"}
 			}
 		}
 		return true
 	})
 
-	newSQL := stmts[0].String()
+	newSQL := Format(stmts[0])
 	require.Contains(t, newSQL, "hack", "Table name should be rewritten to 'hack'")
 	require.NotContains(t, newSQL, "group_by_all", "Original table name should be gone")
 }
@@ -142,7 +142,7 @@ func TestWalk_OrderByDirectionRewriting(t *testing.T) {
 		return true
 	})
 
-	newSQL := stmts[0].String()
+	newSQL := Format(stmts[0])
 	require.Contains(t, newSQL, string(OrderDirectionDesc), "Should contain DESC direction")
 }
 
@@ -158,7 +158,7 @@ func TestWalk_NestedQueryDepthTracking(t *testing.T) {
 	Walk(stmts[0], func(node Expr) bool {
 		// Track nesting depth
 		if tableID, ok := node.(*JoinTableExpr); ok {
-			tableName := tableID.Table.String()
+			tableName := Format(tableID.Table)
 			tableNames = append(tableNames, tableName+"@depth")
 		}
 		return true

@@ -97,7 +97,7 @@ func TestParser_Format(t *testing.T) {
 				builder.WriteString("\n\n-- Format SQL:\n")
 				var formatSQLBuilder strings.Builder
 				for _, stmt := range stmts {
-					formatSQLBuilder.WriteString(stmt.String())
+					formatSQLBuilder.WriteString(Format(stmt))
 					formatSQLBuilder.WriteByte(';')
 					formatSQLBuilder.WriteByte('\n')
 				}
@@ -121,7 +121,7 @@ func validFormatSQL(t *testing.T, sql string) {
 	require.NoError(t, err)
 	var builder strings.Builder
 	for _, stmt := range stmts {
-		builder.WriteString(stmt.String())
+		builder.WriteString(Format(stmt))
 		builder.WriteByte(';')
 		builder.WriteByte('\n')
 	}

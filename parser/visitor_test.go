@@ -40,7 +40,7 @@ func TestVisitor_Identical(t *testing.T) {
 						return true // Continue traversal
 					})
 
-					formatSQLBuilder.WriteString(stmt.String())
+					formatSQLBuilder.WriteString(Format(stmt))
 					formatSQLBuilder.WriteByte(';')
 					formatSQLBuilder.WriteByte('\n')
 				}
@@ -70,7 +70,7 @@ func TestVisitor_SimpleRewrite(t *testing.T) {
 	Walk(stmt, func(node Expr) bool {
 		switch expr := node.(type) {
 		case *TableIdentifier:
-			if expr.Table.String() == "group_by_all" {
+			if Format(expr.Table) == "group_by_all" {
 				expr.Table = &Ident{Name: "hack"}
 			}
 		case *OrderExpr:
@@ -79,7 +79,7 @@ func TestVisitor_SimpleRewrite(t *testing.T) {
 		return true // Continue traversal
 	})
 
-	newSql := stmt.String()
+	newSql := Format(stmt)
 
 	require.NotSame(t, sql, newSql)
 	require.True(t, strings.Contains(newSql, "hack"))
@@ -113,7 +113,7 @@ func TestVisitor_NestRewrite(t *testing.T) {
 		return true
 	})
 
-	newSql := stmt.String()
+	newSql := Format(stmt)
 
 	require.NotSame(t, sql, newSql)
 	// Both table names should be rewritten (they might both be table1 since they're at the same depth)
