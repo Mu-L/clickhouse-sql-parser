@@ -38,8 +38,7 @@ WITH
   WHERE
     year = 2023
   GROUP BY
-    month,
-    department),
+    month, department),
   ranked AS (SELECT
     month,
     department,

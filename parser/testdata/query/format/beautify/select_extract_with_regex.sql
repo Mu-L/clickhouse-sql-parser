@@ -41,13 +41,8 @@ GROUP BY
   CASE
     WHEN length(EXTRACT(instance, '((\\d+\\.){3}\\d+)')) > 0 THEN instance
     ELSE '空'
-  END,
-  CASE
+  END, CASE
     WHEN length(EXTRACT(client_ip, '((\\d+\\.){3}\\d+)')) > 0 THEN client_ip
     ELSE '空'
-  END,
-  src_type,
-  node_class,
-  port,
-  client_port
+  END, src_type, node_class, port, client_port
 LIMIT 10000;

@@ -27,10 +27,12 @@ SELECT
   distro,
   SUM(quantity) AS qty
 FROM servers
-GROUP BY GROUPING SETS((datacenter, distro), (datacenter), (distro), ());
+GROUP BY
+  GROUPING SETS((datacenter, distro), (datacenter), (distro), ());
 SELECT
   datacenter,
   distro,
   SUM(quantity) AS qty
 FROM servers
-GROUP BY ALL;
+GROUP BY
+  ALL;

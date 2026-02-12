@@ -1504,43 +1504,30 @@ func (g *GranteesClause) FormatSQL(formatter *Formatter) {
 
 func (g *GroupByClause) FormatSQL(formatter *Formatter) {
 	formatter.WriteString("GROUP BY")
+
+	formatter.Indent()
+	defer formatter.Dedent()
 	if g.AggregateType != "" {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteString(g.AggregateType)
 	}
 	if g.Expr != nil {
-		if g.AggregateType == "" && formatter.mode == FormatModeBeautify {
-			if columnList, ok := g.Expr.(*ColumnExprList); ok && len(columnList.Items) > 0 {
-				formatter.Indent()
-				for i, item := range columnList.Items {
-					if i == 0 {
-						formatter.Break()
-					} else {
-						formatter.WriteByte(',')
-						formatter.Break()
-					}
-					formatter.WriteExpr(item)
-				}
-				formatter.Dedent()
-			} else {
-				formatter.WriteByte(whitespace)
-				formatter.WriteExpr(g.Expr)
-			}
-		} else if g.AggregateType == "" {
-			formatter.WriteByte(whitespace)
-			formatter.WriteExpr(g.Expr)
-		} else {
-			formatter.WriteExpr(g.Expr)
+		if g.AggregateType == "" {
+			formatter.Break()
 		}
+		formatter.WriteExpr(g.Expr)
 	}
 	if g.WithCube {
-		formatter.WriteString(" WITH CUBE")
+		formatter.Break()
+		formatter.WriteString("WITH CUBE")
 	}
 	if g.WithRollup {
-		formatter.WriteString(" WITH ROLLUP")
+		formatter.Break()
+		formatter.WriteString("WITH ROLLUP")
 	}
 	if g.WithTotals {
-		formatter.WriteString(" WITH TOTALS")
+		formatter.Break()
+		formatter.WriteString("WITH TOTALS")
 	}
 }
 

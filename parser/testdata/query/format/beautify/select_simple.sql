@@ -27,6 +27,5 @@ AND
 AND
   f3 NOT IN ('a', 'b', 'c')
 GROUP BY
-  f0,
-  f1
+  f0, f1
 LIMIT 10 OFFSET 100 BY f0;
