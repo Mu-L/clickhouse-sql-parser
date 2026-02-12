@@ -114,6 +114,48 @@ func TestParser_Format(t *testing.T) {
 	}
 }
 
+func TestParser_FormatBeautify(t *testing.T) {
+	for _, dir := range []string{"./testdata/dml", "./testdata/ddl", "./testdata/query", "./testdata/basic"} {
+		outputDir := dir + "/format/beautify"
+
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			require.NoError(t, err)
+		}
+		for _, entry := range entries {
+			if !strings.HasSuffix(entry.Name(), ".sql") {
+				continue
+			}
+			t.Run(entry.Name(), func(t *testing.T) {
+				fileBytes, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+				require.NoError(t, err)
+				parser := Parser{
+					lexer: NewLexer(string(fileBytes)),
+				}
+				stmts, err := parser.ParseStmts()
+				require.NoError(t, err)
+				var builder strings.Builder
+				builder.WriteString("-- Origin SQL:\n")
+				builder.Write(fileBytes)
+				builder.WriteString("\n\n-- Beautify SQL:\n")
+				for _, stmt := range stmts {
+					formatter := NewFormatter()
+					formatter.WithBeautify()
+					formatter.WriteExpr(stmt)
+					builder.WriteString(formatter.String())
+					builder.WriteByte(';')
+					builder.WriteByte('\n')
+				}
+				g := goldie.New(t,
+					goldie.WithNameSuffix(""),
+					goldie.WithDiffEngine(goldie.ColoredDiff),
+					goldie.WithFixtureDir(outputDir))
+				g.Assert(t, entry.Name(), []byte(builder.String()))
+			})
+		}
+	}
+}
+
 // validFormatSQL Verify that the format sql can be re-parsed with consistent results
 func validFormatSQL(t *testing.T, sql string) {
 	parser := NewParser(sql)

@@ -1,0 +1,5 @@
+-- Origin SQL:
+ALTER TABLE infra.flow_processed_emails_local ON CLUSTER default_cluster REMOVE TTL;
+
+-- Beautify SQL:
+ALTER TABLE infra.flow_processed_emails_local ON CLUSTER default_cluster REMOVE TTL;

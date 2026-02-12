@@ -1,0 +1,5 @@
+-- Origin SQL:
+ALTER TABLE db.test DETACH PARTITION '2021-10-01';
+
+-- Beautify SQL:
+ALTER TABLE db.test DETACH PARTITION '2021-10-01';

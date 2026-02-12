@@ -1,0 +1,5 @@
+-- Origin SQL:
+ALTER TABLE t2 REPLACE PARTITION 'partition' FROM t1;
+
+-- Beautify SQL:
+ALTER TABLE t2 REPLACE PARTITION 'partition' FROM t1;

@@ -1,5 +1,5 @@
 -- Origin SQL:
-DESC TABLE mytable
+DESCRIBE TABLE mytable
 
--- Format SQL:
+-- Beautify SQL:
 DESCRIBE TABLE mytable;

@@ -71,6 +71,7 @@ func (f *Formatter) WriteExpr(expr Expr) {
 	expr.FormatSQL(f)
 }
 
+
 func (f *Formatter) NewLine() {
 	if f.mode != FormatModeBeautify {
 		return
@@ -107,7 +108,46 @@ func Format(expr Expr) string {
 	return formatter.String()
 }
 
+func (p *BinaryOperation) isLogicalOp() bool {
+	switch p.Operation {
+	case TokenKind(KeywordAnd), TokenKind(KeywordOr):
+		return true
+	default:
+		return p.HasGlobal || p.HasNot
+	}
+}
+
+func isLogicalBinaryOp(expr Expr) bool {
+	if bin, ok := expr.(*BinaryOperation); ok {
+		return bin.isLogicalOp()
+	}
+	return false
+}
+
+func (p *BinaryOperation) writeLogicalOperand(formatter *Formatter, expr Expr) {
+	if isLogicalBinaryOp(expr) {
+		formatter.WriteExpr(expr)
+	} else {
+		formatter.Indent()
+		formatter.WriteExpr(expr)
+		formatter.Dedent()
+	}
+}
+
 func (p *BinaryOperation) FormatSQL(formatter *Formatter) {
+	if p.isLogicalOp() && formatter.mode == FormatModeBeautify {
+		p.writeLogicalOperand(formatter, p.LeftExpr)
+		formatter.NewLine()
+		if p.HasNot {
+			formatter.WriteString("NOT ")
+		} else if p.HasGlobal {
+			formatter.WriteString("GLOBAL ")
+		}
+		formatter.WriteString(string(p.Operation))
+		formatter.NewLine()
+		p.writeLogicalOperand(formatter, p.RightExpr)
+		return
+	}
 	formatter.WriteExpr(p.LeftExpr)
 	if p.Operation != TokenKindDash {
 		formatter.WriteByte(whitespace)
@@ -478,8 +518,10 @@ func (a *AuthenticationClause) FormatSQL(formatter *Formatter) {
 func (f *BetweenClause) FormatSQL(formatter *Formatter) {
 	if f.Expr != nil {
 		formatter.WriteExpr(f.Expr)
+		formatter.WriteString(" BETWEEN ")
+	} else {
+		formatter.WriteString("BETWEEN ")
 	}
-	formatter.WriteString(" BETWEEN ")
 	formatter.WriteExpr(f.Between)
 	formatter.WriteString(" AND ")
 	formatter.WriteExpr(f.And)
@@ -502,21 +544,24 @@ func (c *CTEStmt) FormatSQL(formatter *Formatter) {
 }
 
 func (c *CaseExpr) FormatSQL(formatter *Formatter) {
-	formatter.WriteString("CASE ")
+	formatter.WriteString("CASE")
 	if c.Expr != nil {
+		formatter.WriteByte(whitespace)
 		formatter.WriteExpr(c.Expr)
 	}
-	for i, when := range c.Whens {
-		if i > 0 {
-			formatter.WriteByte(whitespace)
-		}
+	formatter.Indent()
+	for _, when := range c.Whens {
+		formatter.Break()
 		formatter.WriteExpr(when)
 	}
 	if c.Else != nil {
-		formatter.WriteString(" ELSE ")
+		formatter.Break()
+		formatter.WriteString("ELSE ")
 		formatter.WriteExpr(c.Else)
 	}
-	formatter.WriteString(" END")
+	formatter.Dedent()
+	formatter.Break()
+	formatter.WriteString("END")
 }
 
 func (c *CastExpr) FormatSQL(formatter *Formatter) {
@@ -1458,12 +1503,35 @@ func (g *GranteesClause) FormatSQL(formatter *Formatter) {
 }
 
 func (g *GroupByClause) FormatSQL(formatter *Formatter) {
-	formatter.WriteString("GROUP BY ")
+	formatter.WriteString("GROUP BY")
 	if g.AggregateType != "" {
+		formatter.WriteByte(whitespace)
 		formatter.WriteString(g.AggregateType)
 	}
 	if g.Expr != nil {
-		formatter.WriteExpr(g.Expr)
+		if g.AggregateType == "" && formatter.mode == FormatModeBeautify {
+			if columnList, ok := g.Expr.(*ColumnExprList); ok && len(columnList.Items) > 0 {
+				formatter.Indent()
+				for i, item := range columnList.Items {
+					if i == 0 {
+						formatter.Break()
+					} else {
+						formatter.WriteByte(',')
+						formatter.Break()
+					}
+					formatter.WriteExpr(item)
+				}
+				formatter.Dedent()
+			} else {
+				formatter.WriteByte(whitespace)
+				formatter.WriteExpr(g.Expr)
+			}
+		} else if g.AggregateType == "" {
+			formatter.WriteByte(whitespace)
+			formatter.WriteExpr(g.Expr)
+		} else {
+			formatter.WriteExpr(g.Expr)
+		}
 	}
 	if g.WithCube {
 		formatter.WriteString(" WITH CUBE")
@@ -2591,16 +2659,17 @@ func (w *WhenClause) FormatSQL(formatter *Formatter) {
 	}
 }
 
-func isLogicalOperation(operation TokenKind) bool {
-	return strings.EqualFold(string(operation), KeywordAnd) || strings.EqualFold(string(operation), KeywordOr)
-}
-
 func (w *WhereClause) FormatSQL(formatter *Formatter) {
 	formatter.WriteString("WHERE")
-	formatter.Indent()
-	formatter.Break()
-	formatter.WriteExpr(w.Expr)
-	formatter.Dedent()
+	if isLogicalBinaryOp(w.Expr) {
+		formatter.Break()
+		formatter.WriteExpr(w.Expr)
+	} else {
+		formatter.Indent()
+		formatter.Break()
+		formatter.WriteExpr(w.Expr)
+		formatter.Dedent()
+	}
 }
 
 func (w *WindowDefinition) FormatSQL(formatter *Formatter) {
