@@ -21,7 +21,8 @@ LAYOUT(HASHED())
 SETTINGS(max_block_size = 8192);
 
 -- Beautify SQL:
-CREATE DICTIONARY test.my_dict (
+CREATE DICTIONARY test.my_dict
+(
   id UInt64,
   name String DEFAULT '',
   value Float64 EXPRESSION toFloat64OrZero(name),

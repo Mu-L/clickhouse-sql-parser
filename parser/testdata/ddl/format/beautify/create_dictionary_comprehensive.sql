@@ -24,7 +24,10 @@ LAYOUT(HASHED())
 SETTINGS(max_block_size = 8192, max_insert_block_size = 1048576);
 
 -- Beautify SQL:
-CREATE OR REPLACE DICTIONARY test.comprehensive_dict UUID '12345678-1234-1234-1234-123456789012' ON CLUSTER production_cluster (
+CREATE OR REPLACE DICTIONARY test.comprehensive_dict
+UUID '12345678-1234-1234-1234-123456789012'
+ON CLUSTER production_cluster
+(
   id UInt64,
   name String DEFAULT '',
   value Float64 EXPRESSION toFloat64OrZero(name),

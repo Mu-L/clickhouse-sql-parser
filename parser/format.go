@@ -756,17 +756,17 @@ func (c *CreateDictionary) FormatSQL(formatter *Formatter) {
 	formatter.WriteExpr(c.Name)
 
 	if c.UUID != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.UUID)
 	}
 
 	if c.OnCluster != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.OnCluster)
 	}
 
 	if c.Schema != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.Schema)
 	}
 
@@ -1183,35 +1183,32 @@ func (d *DictionaryAttribute) FormatSQL(formatter *Formatter) {
 }
 
 func (d *DictionaryEngineClause) FormatSQL(formatter *Formatter) {
+	needsBreak := false
+	breakAndWrite := func(expr Expr) {
+		if needsBreak {
+			formatter.Break()
+		}
+		formatter.WriteExpr(expr)
+		needsBreak = true
+	}
+
 	if d.PrimaryKey != nil {
-		formatter.WriteExpr(d.PrimaryKey)
+		breakAndWrite(d.PrimaryKey)
 	}
 	if d.Source != nil {
-		if d.PrimaryKey != nil {
-			formatter.Break()
-		}
-		formatter.WriteExpr(d.Source)
+		breakAndWrite(d.Source)
 	}
 	if d.Lifetime != nil {
-		if d.PrimaryKey != nil || d.Source != nil {
-			formatter.Break()
-		}
-		formatter.WriteExpr(d.Lifetime)
+		breakAndWrite(d.Lifetime)
 	}
 	if d.Layout != nil {
-		if d.PrimaryKey != nil || d.Source != nil || d.Lifetime != nil {
-			formatter.Break()
-		}
-		formatter.WriteExpr(d.Layout)
+		breakAndWrite(d.Layout)
 	}
 	if d.Range != nil {
-		if d.PrimaryKey != nil || d.Source != nil || d.Lifetime != nil || d.Layout != nil {
-			formatter.Break()
-		}
-		formatter.WriteExpr(d.Range)
+		breakAndWrite(d.Range)
 	}
 	if d.Settings != nil {
-		if d.PrimaryKey != nil || d.Source != nil || d.Lifetime != nil || d.Layout != nil || d.Range != nil {
+		if needsBreak {
 			formatter.Break()
 		}
 		formatter.WriteString("SETTINGS(")

@@ -23,7 +23,8 @@ COMMENT 'This is a test dictionary with comment';
 
 
 -- Beautify SQL:
-CREATE DICTIONARY test.my_dict (
+CREATE DICTIONARY test.my_dict
+(
   id UInt64,
   name String DEFAULT '',
   value Float64 EXPRESSION toFloat64OrZero(name),
