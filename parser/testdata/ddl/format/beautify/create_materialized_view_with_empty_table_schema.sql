@@ -16,27 +16,31 @@ from
 where rn = 1;
 
 -- Beautify SQL:
-CREATE MATERIALIZED VIEW test.t0 ON CLUSTER default_cluster
+CREATE MATERIALIZED VIEW test.t0
+ON CLUSTER default_cluster
 ENGINE = ReplicatedAggregatingMergeTree('/clickhouse/{layer}-{shard}/test/t0', '{replica}')
 ORDER BY
   (f0)
-PARTITION BY toYYYYMM(f0) POPULATE AS SELECT
-  f0,
-  f1,
-  f2,
-  coalesce(f0, f1) AS f333
-FROM
-  (SELECT
+PARTITION BY toYYYYMM(f0)
+POPULATE
+AS
+  SELECT
     f0,
     f1,
     f2,
-    ROW_NUMBER() OVER (PARTITION BY f0 ORDER BY
-      coalesce(f1, f2)) AS rn
+    coalesce(f0, f1) AS f333
   FROM
-    test.t
+    (SELECT
+      f0,
+      f1,
+      f2,
+      ROW_NUMBER() OVER (PARTITION BY f0 ORDER BY
+        coalesce(f1, f2)) AS rn
+    FROM
+      test.t
+    WHERE
+      f3 IN ('foo', 'bar', 'test')
+    AND
+      env = 'test') AS tmp
   WHERE
-    f3 IN ('foo', 'bar', 'test')
-  AND
-    env = 'test') AS tmp
-WHERE
-  rn = 1;
+    rn = 1;

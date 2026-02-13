@@ -735,7 +735,7 @@ func (c *CreateDatabase) FormatSQL(formatter *Formatter) {
 		formatter.WriteExpr(c.OnCluster)
 	}
 	if c.Engine != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.Engine)
 	}
 	if c.Comment != nil {
@@ -844,19 +844,21 @@ func (c *CreateMaterializedView) FormatSQL(formatter *Formatter) {
 	}
 	formatter.WriteExpr(c.Name)
 	if c.OnCluster != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.OnCluster)
 	}
 	if c.Refresh != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.Refresh)
 	}
 	if c.RandomizeFor != nil {
-		formatter.WriteString(" RANDOMIZE FOR ")
+		formatter.Break()
+		formatter.WriteString("RANDOMIZE FOR ")
 		formatter.WriteExpr(c.RandomizeFor)
 	}
 	if c.DependsOn != nil {
-		formatter.WriteString(" DEPENDS ON ")
+		formatter.Break()
+		formatter.WriteString("DEPENDS ON ")
 		for i, dep := range c.DependsOn {
 			if i > 0 {
 				formatter.WriteString(", ")
@@ -865,48 +867,54 @@ func (c *CreateMaterializedView) FormatSQL(formatter *Formatter) {
 		}
 	}
 	if c.Settings != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.Settings)
 	}
 	if c.HasAppend {
-		if c.Settings != nil {
-			formatter.Break()
-		} else {
-			formatter.WriteByte(whitespace)
-		}
+		formatter.Break()
 		formatter.WriteString("APPEND")
 	}
 	if c.Engine != nil {
+		formatter.Break()
 		formatter.WriteExpr(c.Engine)
 	}
 	if c.Destination != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.Destination)
 		if c.Destination.TableSchema != nil {
-			formatter.WriteByte(whitespace)
+			formatter.Break()
 			formatter.WriteExpr(c.Destination.TableSchema)
 		}
 	}
 	if c.HasEmpty {
-		formatter.WriteString(" EMPTY")
+		formatter.Break()
+		formatter.WriteString("EMPTY")
 	}
 	if c.Definer != nil {
-		formatter.WriteString(" DEFINER = ")
+		formatter.Break()
+		formatter.WriteString("DEFINER = ")
 		formatter.WriteExpr(c.Definer)
 	}
 	if c.SQLSecurity != "" {
-		formatter.WriteString(" SQL SECURITY ")
+		formatter.Break()
+		formatter.WriteString("SQL SECURITY ")
 		formatter.WriteString(c.SQLSecurity)
 	}
 	if c.Populate {
-		formatter.WriteString(" POPULATE")
+		formatter.Break()
+		formatter.WriteString("POPULATE")
 	}
 	if c.SubQuery != nil {
-		formatter.WriteString(" AS ")
+		formatter.Break()
+		formatter.WriteString("AS")
+		formatter.Indent()
+		formatter.Break()
 		formatter.WriteExpr(c.SubQuery)
+		formatter.Dedent()
 	}
 	if c.Comment != nil {
-		formatter.WriteString(" COMMENT ")
+		formatter.Break()
+		formatter.WriteString("COMMENT ")
 		formatter.WriteExpr(c.Comment)
 	}
 }
@@ -986,6 +994,7 @@ func (c *CreateTable) FormatSQL(formatter *Formatter) {
 		formatter.WriteExpr(c.TableSchema)
 	}
 	if c.Engine != nil {
+		formatter.Break()
 		formatter.WriteExpr(c.Engine)
 	}
 	if c.SubQuery != nil {
@@ -1359,7 +1368,6 @@ func (d *DropUserOrRole) FormatSQL(formatter *Formatter) {
 }
 
 func (e *EngineExpr) FormatSQL(formatter *Formatter) {
-	formatter.Break()
 	formatter.WriteString("ENGINE = ")
 	formatter.WriteString(e.Name)
 	if e.Params != nil {
