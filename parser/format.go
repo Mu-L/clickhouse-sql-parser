@@ -241,10 +241,10 @@ func (a *AlterTableAddColumn) FormatSQL(formatter *Formatter) {
 
 func (a *AlterTableAddIndex) FormatSQL(formatter *Formatter) {
 	formatter.WriteString("ADD ")
-	formatter.WriteExpr(a.Index)
 	if a.IfNotExists {
 		formatter.WriteString("IF NOT EXISTS ")
 	}
+	formatter.WriteExpr(a.Index)
 	if a.After != nil {
 		formatter.WriteString(" AFTER ")
 		formatter.WriteExpr(a.After)
@@ -337,10 +337,10 @@ func (a *AlterTableDropColumn) FormatSQL(formatter *Formatter) {
 
 func (a *AlterTableDropIndex) FormatSQL(formatter *Formatter) {
 	formatter.WriteString("DROP INDEX ")
-	formatter.WriteExpr(a.IndexName)
 	if a.IfExists {
-		formatter.WriteString(" IF EXISTS")
+		formatter.WriteString("IF EXISTS ")
 	}
+	formatter.WriteExpr(a.IndexName)
 }
 
 func (a *AlterTableDropPartition) FormatSQL(formatter *Formatter) {
@@ -357,10 +357,10 @@ func (a *AlterTableDropPartition) FormatSQL(formatter *Formatter) {
 
 func (a *AlterTableDropProjection) FormatSQL(formatter *Formatter) {
 	formatter.WriteString("DROP PROJECTION ")
-	formatter.WriteExpr(a.ProjectionName)
 	if a.IfExists {
-		formatter.WriteString(" IF EXISTS")
+		formatter.WriteString("IF EXISTS ")
 	}
+	formatter.WriteExpr(a.ProjectionName)
 }
 
 func (a *AlterTableFreezePartition) FormatSQL(formatter *Formatter) {
