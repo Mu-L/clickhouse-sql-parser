@@ -39,8 +39,10 @@ SELECT
 FROM (SELECT
   number
 FROM system.numbers
-LIMIT 5) AS f ANY LEFT JOIN (SELECT
-  x,
-  y
-FROM table_1) AS s ON f.number = s.x
+LIMIT 5) AS f
+ANY LEFT JOIN
+  (SELECT
+    x,
+    y
+  FROM table_1) AS s ON f.number = s.x
 SETTINGS additional_table_filters={'system.numbers': 'number != 3', 'table_1': 'x != 2'};

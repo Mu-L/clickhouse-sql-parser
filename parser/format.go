@@ -1770,15 +1770,18 @@ func writeJoinSQL(formatter *Formatter, expr Expr) {
 
 	if len(joinExpr.Modifiers) == 0 {
 		formatter.WriteByte(',')
+		formatter.WriteExpr(joinExpr.Left)
 	} else {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteString(strings.Join(joinExpr.Modifiers, " "))
-		formatter.WriteByte(whitespace)
-	}
-	formatter.WriteExpr(joinExpr.Left)
-	if joinExpr.Constraints != nil {
-		formatter.WriteByte(whitespace)
-		formatter.WriteExpr(joinExpr.Constraints)
+		formatter.Indent()
+		formatter.Break()
+		formatter.WriteExpr(joinExpr.Left)
+		if joinExpr.Constraints != nil {
+			formatter.WriteByte(whitespace)
+			formatter.WriteExpr(joinExpr.Constraints)
+		}
+		formatter.Dedent()
 	}
 	if joinExpr.Right != nil {
 		writeJoinSQL(formatter, joinExpr.Right)
