@@ -312,7 +312,9 @@ func (a *AlterTableClearProjection) FormatSQL(formatter *Formatter) {
 }
 
 func (a *AlterTableDelete) FormatSQL(formatter *Formatter) {
-	formatter.WriteString("DELETE WHERE ")
+	formatter.WriteString("DELETE")
+	formatter.Break()
+	formatter.WriteString("WHERE ")
 	formatter.WriteExpr(a.WhereClause)
 }
 
@@ -409,18 +411,26 @@ func (a *AlterTableModifyColumn) FormatSQL(formatter *Formatter) {
 }
 
 func (a *AlterTableModifyQuery) FormatSQL(formatter *Formatter) {
-	formatter.WriteString("MODIFY QUERY ")
+	formatter.WriteString("MODIFY QUERY")
+	formatter.Indent()
+	formatter.Break()
 	formatter.WriteExpr(a.SelectExpr)
+	formatter.Dedent()
 }
 
 func (a *AlterTableModifySetting) FormatSQL(formatter *Formatter) {
-	formatter.WriteString("MODIFY SETTING ")
+	formatter.WriteString("MODIFY SETTING")
+	formatter.Indent()
 	for i, setting := range a.Settings {
-		if i > 0 {
-			formatter.WriteString(", ")
+		if i == 0 {
+			formatter.Break()
+		} else {
+			formatter.WriteByte(',')
+			formatter.Break()
 		}
 		formatter.WriteExpr(setting)
 	}
+	formatter.Dedent()
 }
 
 func (a *AlterTableModifyTTL) FormatSQL(formatter *Formatter) {
@@ -450,28 +460,40 @@ func (a *AlterTableReplacePartition) FormatSQL(formatter *Formatter) {
 }
 
 func (a *AlterTableResetSetting) FormatSQL(formatter *Formatter) {
-	formatter.WriteString("RESET SETTING ")
+	formatter.WriteString("RESET SETTING")
+	formatter.Indent()
 	for i, setting := range a.Settings {
-		if i > 0 {
-			formatter.WriteString(", ")
+		if i == 0 {
+			formatter.Break()
+		} else {
+			formatter.WriteByte(',')
+			formatter.Break()
 		}
 		formatter.WriteExpr(setting)
 	}
+	formatter.Dedent()
 }
 
 func (a *AlterTableUpdate) FormatSQL(formatter *Formatter) {
-	formatter.WriteString("UPDATE ")
+	formatter.WriteString("UPDATE")
+	formatter.Indent()
 	for i, assignment := range a.Assignments {
-		if i > 0 {
-			formatter.WriteString(", ")
+		if i == 0 {
+			formatter.Break()
+		} else {
+			formatter.WriteByte(',')
+			formatter.Break()
 		}
 		formatter.WriteExpr(assignment)
 	}
+	formatter.Dedent()
 	if a.InPartition != nil {
-		formatter.WriteString(" IN ")
+		formatter.Break()
+		formatter.WriteString("IN ")
 		formatter.WriteExpr(a.InPartition)
 	}
-	formatter.WriteString(" WHERE ")
+	formatter.Break()
+	formatter.WriteString("WHERE ")
 	formatter.WriteExpr(a.WhereClause)
 }
 

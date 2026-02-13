@@ -3,4 +3,7 @@ ALTER TABLE example_table RESET SETTING max_part_loading_threads, max_parts_in_t
 
 -- Beautify SQL:
 ALTER TABLE example_table
-RESET SETTING max_part_loading_threads, max_parts_in_total, another_setting;
+RESET SETTING
+  max_part_loading_threads,
+  max_parts_in_total,
+  another_setting;
