@@ -279,7 +279,8 @@ func (a *AlterTableClearColumn) FormatSQL(formatter *Formatter) {
 	}
 	formatter.WriteExpr(a.ColumnName)
 	if a.PartitionExpr != nil {
-		formatter.WriteString(" IN ")
+		formatter.Break()
+		formatter.WriteString("IN ")
 		formatter.WriteExpr(a.PartitionExpr)
 	}
 
@@ -292,7 +293,8 @@ func (a *AlterTableClearIndex) FormatSQL(formatter *Formatter) {
 	}
 	formatter.WriteExpr(a.IndexName)
 	if a.PartitionExpr != nil {
-		formatter.WriteString(" IN ")
+		formatter.Break()
+		formatter.WriteString("IN ")
 		formatter.WriteExpr(a.PartitionExpr)
 	}
 
@@ -305,7 +307,8 @@ func (a *AlterTableClearProjection) FormatSQL(formatter *Formatter) {
 	}
 	formatter.WriteExpr(a.ProjectionName)
 	if a.PartitionExpr != nil {
-		formatter.WriteString(" IN ")
+		formatter.Break()
+		formatter.WriteString("IN ")
 		formatter.WriteExpr(a.PartitionExpr)
 	}
 
@@ -380,7 +383,8 @@ func (a *AlterTableMaterializeIndex) FormatSQL(formatter *Formatter) {
 	formatter.WriteByte(whitespace)
 	formatter.WriteExpr(a.IndexName)
 	if a.Partition != nil {
-		formatter.WriteString(" IN ")
+		formatter.Break()
+		formatter.WriteString("IN ")
 		formatter.WriteExpr(a.Partition)
 	}
 }
@@ -394,7 +398,8 @@ func (a *AlterTableMaterializeProjection) FormatSQL(formatter *Formatter) {
 	formatter.WriteByte(whitespace)
 	formatter.WriteExpr(a.ProjectionName)
 	if a.Partition != nil {
-		formatter.WriteString(" IN ")
+		formatter.Break()
+		formatter.WriteString("IN ")
 		formatter.WriteExpr(a.Partition)
 	}
 }
@@ -534,11 +539,13 @@ func (a *AuthenticationClause) FormatSQL(formatter *Formatter) {
 		formatter.WriteExpr(a.AuthValue)
 	}
 	if a.LdapServer != nil {
-		formatter.WriteString(" WITH ldap SERVER ")
+		formatter.Break()
+		formatter.WriteString("WITH ldap SERVER ")
 		formatter.WriteExpr(a.LdapServer)
 	}
 	if a.IsKerberos {
-		formatter.WriteString(" WITH kerberos")
+		formatter.Break()
+		formatter.WriteString("WITH kerberos")
 		if a.KerberosRealm != nil && a.KerberosRealm.Literal != "" {
 			formatter.WriteString(" REALM ")
 			formatter.WriteExpr(a.KerberosRealm)
