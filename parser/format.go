@@ -840,30 +840,30 @@ func (c *CreateLiveView) FormatSQL(formatter *Formatter) {
 	formatter.WriteExpr(c.Name)
 
 	if c.OnCluster != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.OnCluster)
 	}
 
 	if c.WithTimeout != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.WithTimeout)
 	}
 
 	if c.Destination != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.Destination)
 	}
 
 	if c.TableSchema != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(c.TableSchema)
 	}
 
 	if c.SubQuery != nil {
-		formatter.WriteString(" AS ")
+		formatter.Break()
+		formatter.WriteString("AS ")
 		formatter.WriteExpr(c.SubQuery)
 	}
-
 }
 
 func (c *CreateMaterializedView) FormatSQL(formatter *Formatter) {
