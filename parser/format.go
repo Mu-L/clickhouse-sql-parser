@@ -224,7 +224,7 @@ func (a *AlterTableAddColumn) FormatSQL(formatter *Formatter) {
 		formatter.WriteExpr(a.After)
 	}
 	if a.Settings != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(a.Settings)
 	}
 }
@@ -310,7 +310,7 @@ func (a *AlterTableDetachPartition) FormatSQL(formatter *Formatter) {
 	formatter.WriteString("DETACH ")
 	formatter.WriteExpr(a.Partition)
 	if a.Settings != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(a.Settings)
 	}
 }
@@ -338,7 +338,7 @@ func (a *AlterTableDropPartition) FormatSQL(formatter *Formatter) {
 	}
 	formatter.WriteExpr(a.Partition)
 	if a.Settings != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
 		formatter.WriteExpr(a.Settings)
 	}
 }
@@ -858,7 +858,12 @@ func (c *CreateMaterializedView) FormatSQL(formatter *Formatter) {
 		formatter.WriteExpr(c.Settings)
 	}
 	if c.HasAppend {
-		formatter.WriteString(" APPEND")
+		if c.Settings != nil {
+			formatter.Break()
+		} else {
+			formatter.WriteByte(whitespace)
+		}
+		formatter.WriteString("APPEND")
 	}
 	if c.Engine != nil {
 		formatter.WriteExpr(c.Engine)
@@ -2307,13 +2312,18 @@ func (s *SettingPair) FormatSQL(formatter *Formatter) {
 }
 
 func (s *SettingsClause) FormatSQL(formatter *Formatter) {
-	formatter.WriteString("SETTINGS ")
+	formatter.WriteString("SETTINGS")
+	formatter.Indent()
 	for i, item := range s.Items {
-		if i > 0 {
-			formatter.WriteString(", ")
+		if i == 0 {
+			formatter.Break()
+		} else {
+			formatter.WriteByte(',')
+			formatter.Break()
 		}
 		formatter.WriteExpr(item)
 	}
+	formatter.Dedent()
 }
 
 func (s *ShowStmt) FormatSQL(formatter *Formatter) {
