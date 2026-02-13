@@ -1579,8 +1579,10 @@ func (i *InsertStmt) FormatSQL(formatter *Formatter) {
 	}
 	formatter.WriteExpr(i.Table)
 	if i.ColumnNames != nil {
-		formatter.WriteByte(whitespace)
+		formatter.Break()
+		formatter.Indent()
 		formatter.WriteExpr(i.ColumnNames)
+		formatter.Dedent()
 	}
 	if i.Format != nil {
 		formatter.WriteByte(whitespace)
