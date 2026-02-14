@@ -64,7 +64,7 @@ $ clickhouse-sql-parser -f ./test.sql
 
 The `-beautify` flag formats SQL with proper indentation and line breaks, making complex queries more readable:
 
-```bash
+```SQL
 # Input (compact, hard to read)
 $ clickhouse-sql-parser -beautify "SELECT user_id, COUNT(*) AS total, AVG(amount) AS avg_amount FROM orders WHERE status='completed' AND created_at>'2024-01-01' GROUP BY user_id HAVING COUNT(*)>5 ORDER BY total DESC LIMIT 10"
 
