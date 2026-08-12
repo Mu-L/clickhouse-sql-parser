@@ -520,10 +520,17 @@ func TestIntervalAsColumnName(t *testing.T) {
 }
 
 func TestIntervalOperatorStillParses(t *testing.T) {
-	expr := parseSelectItemExpr(t, "SELECT INTERVAL 4 DAY")
-	interval, ok := expr.(*IntervalExpr)
-	require.True(t, ok, "expected *IntervalExpr, got %T", expr)
-	require.Equal(t, "DAY", interval.Unit.Name)
+	for _, sql := range []string{
+		"SELECT INTERVAL 4 DAY",
+		"SELECT INTERVAL .1 DAY",
+	} {
+		t.Run(sql, func(t *testing.T) {
+			expr := parseSelectItemExpr(t, sql)
+			interval, ok := expr.(*IntervalExpr)
+			require.True(t, ok, "expected *IntervalExpr, got %T", expr)
+			require.Equal(t, "DAY", interval.Unit.Name)
+		})
+	}
 }
 
 func TestRepeatedIntervalColumnsParseInPolynomialTime(t *testing.T) {

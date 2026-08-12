@@ -187,12 +187,19 @@ func (p *Parser) parseInfix(expr Expr, precedence int) (Expr, error) {
 		}, nil
 	case p.matchTokenKind(TokenKindDot):
 		_ = p.lexer.consumeToken()
-		// access column with dot notation
+		operation := TokenKindDot
+		hasTypeQualifier := p.tryConsumeTokenKind(TokenKindColon) != nil
+		if hasTypeQualifier {
+			// Dynamic JSON subcolumns can pin their result type with
+			// `.:Type`, for example `json.path.:`Array(JSON)``.
+			operation = TokenKindDot + TokenKindColon
+		}
+
 		var rightExpr Expr
 		var err error
-		if p.matchTokenKind(TokenKindIdent, TokenKindKeyword) {
-			// After a dot the token can only be a member name, so even
-			// reserved keywords are accepted (e.g. `t.from`).
+		if hasTypeQualifier || p.matchTokenKind(TokenKindIdent, TokenKindKeyword) {
+			// After a dot the token can only be a member name or type
+			// qualifier, so even reserved keywords are accepted.
 			rightExpr, err = p.parseAnyKeyword()
 		} else {
 			rightExpr, err = p.parseDecimal(p.Pos())
@@ -202,7 +209,7 @@ func (p *Parser) parseInfix(expr Expr, precedence int) (Expr, error) {
 		}
 		return &IndexOperation{
 			Object:    expr,
-			Operation: TokenKindDot,
+			Operation: operation,
 			Index:     rightExpr,
 		}, nil
 	case p.matchKeyword(KeywordNot):
@@ -527,7 +534,7 @@ func (p *Parser) peekIsExpressionContinuation() bool {
 // queries like `SELECT a, limit FROM t` or `SELECT a, from, b FROM t`
 // without backtick escaping. Backticked identifiers are tokenized as
 // TokenKindIdent (not TokenKindKeyword), so trailing-comma handling for
-// keyword-named tables — e.g. `SELECT count(*), FROM `limit`` — is preserved.
+// keyword-named tables — e.g. `SELECT count(*), FROM `limit“ — is preserved.
 //
 // End-of-statement (EOF or `;`) is intentionally NOT included here. It's a
 // valid disambiguator only in expression position (the current keyword IS
@@ -556,9 +563,18 @@ func (p *Parser) isSelectItemTerminatorKeyword() bool {
 }
 
 func (p *Parser) parseColumnExpr(pos Pos) (Expr, error) { //nolint:funlen
-	// Should parse the keyword as an identifier if the keyword is followed by
-	// `,`, `AS`, another clause-starter keyword, or end-of-statement (EOF or
-	// `;`). ClickHouse accepts most reserved words as bare column names in
+	// A keyword followed by a dot is unambiguously the left side of a
+	// qualified column reference, even when it is otherwise reserved (for
+	// example, `kill.item_id`). INTERVAL must reach its dedicated parser
+	// first because a dot can also start its numeric operand.
+	if !p.matchKeyword(KeywordInterval) &&
+		p.matchTokenKind(TokenKindKeyword) && p.peekTokenKind(TokenKindDot) {
+		return p.parseIdentOrFunction(pos)
+	}
+
+	// Parse the keyword as an identifier if it is followed by `,`, `AS`,
+	// another clause-starter keyword, or end-of-statement (EOF or `;`).
+	// ClickHouse accepts most reserved words as bare column names in
 	// projections (e.g. `SELECT 1 AS interval GROUP BY interval`,
 	// `SELECT a, case FROM t`, `SELECT case`); a clause/expression starter
 	// always requires a value/expression next, so the lookahead unambiguously

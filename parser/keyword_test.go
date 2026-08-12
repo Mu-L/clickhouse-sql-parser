@@ -86,6 +86,7 @@ func TestReservedKeywordInDisambiguatedPositions(t *testing.T) {
 		"SELECT * FROM t AS from",
 		"SELECT a FROM db.from",
 		"SELECT t.from FROM t",
+		"SELECT kill.id FROM events AS kill",
 		"SELECT a, limit FROM t",
 		"SELECT case;",
 		"SELECT limit",

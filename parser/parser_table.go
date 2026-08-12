@@ -403,9 +403,10 @@ func (p *Parser) parseCreateTable(pos Pos, orReplace bool) (*CreateTable, error)
 func (p *Parser) parseIdentOrFunction(_ Pos) (Expr, error) {
 	var ident *Ident
 	var err error
-	if p.matchTokenKind(TokenKindKeyword) && p.peekTokenKind(TokenKindLParen) {
-		// reserved operator keywords stay callable as ordinary functions:
-		// and(a, b), or(a, b), in(x, set), like(s, pat), ...
+	if p.matchTokenKind(TokenKindKeyword) &&
+		(p.peekTokenKind(TokenKindLParen) || p.peekTokenKind(TokenKindDot)) {
+		// Reserved keywords remain valid when context proves they are function
+		// names or the first field of a qualified name.
 		ident, err = p.parseAnyKeyword()
 	} else {
 		ident, err = p.parseIdent()
@@ -466,7 +467,8 @@ func (p *Parser) parseIdentOrFunction(_ Pos) (Expr, error) {
 			}, nil
 		}
 		return funcExpr, nil
-	case p.tryConsumeTokenKind(TokenKindDot) != nil:
+	case p.matchTokenKind(TokenKindDot) && !p.peekTokenKind(TokenKindColon):
+		_ = p.lexer.consumeToken()
 		switch {
 		case p.matchTokenKind(TokenKindIdent, TokenKindKeyword):
 			fields := []*Ident{ident}
@@ -478,9 +480,10 @@ func (p *Parser) parseIdentOrFunction(_ Pos) (Expr, error) {
 					return nil, err
 				}
 				fields = append(fields, child)
-				if p.tryConsumeTokenKind(TokenKindDot) == nil {
+				if !p.matchTokenKind(TokenKindDot) || p.peekTokenKind(TokenKindColon) {
 					break
 				}
+				_ = p.lexer.consumeToken()
 			}
 			return &Path{Fields: fields}, nil
 		case p.matchTokenKind("*"):
