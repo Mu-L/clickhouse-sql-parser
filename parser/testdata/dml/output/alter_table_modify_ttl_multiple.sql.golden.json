@@ -104,10 +104,11 @@
                     "LiteralEnd": 125,
                     "Literal": "gcs"
                   },
-                  "Action": null
+                  "Action": null,
+                  "GroupBy": null,
+                  "Set": null
                 },
-                "Where": null,
-                "GroupBy": null
+                "Where": null
               }
             },
             {

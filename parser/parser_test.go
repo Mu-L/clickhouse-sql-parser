@@ -192,6 +192,29 @@ func TestParser_InvalidSyntax(t *testing.T) {
 		"CREATE TABLE t (x String DEFAULT CAST(a +, 'String'))",
 		"CREATE TABLE t (x String MATERIALIZED a +)",
 		"CREATE TABLE t (x String ALIAS a +)",
+		// A TTL GROUP BY action only accepts a plain expression list; the
+		// query-level modifiers are syntax errors for ClickHouse in a TTL.
+		// (GROUP BY ALL and CUBE/ROLLUP(...) read as ordinary key
+		// expressions there and are only rejected semantically.)
+		"CREATE TABLE t (id UInt64, created DateTime) ENGINE = MergeTree() ORDER BY id TTL created + INTERVAL 1 DAY GROUP BY id WITH TOTALS",
+		"CREATE TABLE t (id UInt64, created DateTime) ENGINE = MergeTree() ORDER BY id TTL created + INTERVAL 1 DAY GROUP BY id WITH ROLLUP",
+		"CREATE TABLE t (id UInt64, created DateTime) ENGINE = MergeTree() ORDER BY id TTL created + INTERVAL 1 DAY GROUP BY id WITH CUBE",
+		"CREATE TABLE t (id UInt64, created DateTime) ENGINE = MergeTree() ORDER BY id TTL created + INTERVAL 1 DAY GROUP BY GROUPING SETS (id)",
+		// OR REPLACE is only accepted for MATERIALIZED VIEW under CREATE,
+		// never under ATTACH
+		"ATTACH OR REPLACE MATERIALIZED VIEW mv TO dest AS SELECT * FROM src",
+		// A TTL GROUP BY key list is greedy: after the keys the comma
+		// continues the list, so a trailing TTL action after a
+		// comma-separated key is rejected by ClickHouse (unlike after a
+		// complete SET assignment, where the comma starts the next TTL
+		// rule).
+		"CREATE TABLE t (id UInt64, created DateTime) ENGINE = MergeTree() ORDER BY id TTL created + INTERVAL 1 DAY GROUP BY id, created + INTERVAL 2 DAY DELETE",
+		// A TTL WHERE clause belongs only to the DELETE action; ClickHouse
+		// rejects it after GROUP BY, RECOMPRESS, and TO DISK/VOLUME.
+		"CREATE TABLE t (id UInt64, created DateTime, x UInt64) ENGINE = MergeTree() ORDER BY id TTL created + INTERVAL 1 DAY GROUP BY id SET x = sum(x) WHERE id > 0",
+		"CREATE TABLE t (id UInt64, created DateTime) ENGINE = MergeTree() ORDER BY id TTL created + INTERVAL 1 DAY GROUP BY id WHERE id > 0",
+		"CREATE TABLE t (id UInt64, created DateTime) ENGINE = MergeTree() ORDER BY id TTL created + INTERVAL 1 DAY RECOMPRESS CODEC(ZSTD(1)) WHERE id > 0",
+		"CREATE TABLE t (id UInt64, created DateTime) ENGINE = MergeTree() ORDER BY id TTL created + INTERVAL 1 DAY TO VOLUME 'v1' WHERE id > 0",
 		// Invalid ARRAY JOIN types (only ARRAY JOIN, LEFT ARRAY JOIN, and INNER ARRAY JOIN are valid)
 		"SELECT * FROM t RIGHT ARRAY JOIN arr AS a", // RIGHT ARRAY JOIN not supported
 		"SELECT * FROM t FULL ARRAY JOIN arr AS a",  // FULL ARRAY JOIN not supported

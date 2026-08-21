@@ -10,10 +10,19 @@ func (p *Parser) parseDDL(pos Pos) (DDL, error) {
 	switch {
 	case p.matchKeyword(KeywordCreate),
 		p.matchKeyword(KeywordAttach):
+		isAttach := p.matchKeyword(KeywordAttach)
 		_ = p.lexer.consumeToken()
 		orReplace := p.tryConsumeKeywords(KeywordOr, KeywordReplace)
-		if orReplace && !p.matchOneOfKeywords(KeywordTemporary, KeywordTable, KeywordView, KeywordFunction, KeywordDictionary) {
-			return nil, fmt.Errorf("expected keyword: TEMPORARY|TABLE|VIEW|FUNCTION|DICTIONARY, but got %q", p.currentTokenString())
+		if orReplace {
+			// MATERIALIZED VIEW accepts OR REPLACE only under CREATE;
+			// ClickHouse rejects an ATTACH OR REPLACE combination.
+			if isAttach {
+				if !p.matchOneOfKeywords(KeywordTemporary, KeywordTable, KeywordView, KeywordFunction, KeywordDictionary) {
+					return nil, fmt.Errorf("expected keyword: TEMPORARY|TABLE|VIEW|FUNCTION|DICTIONARY, but got %q", p.currentTokenString())
+				}
+			} else if !p.matchOneOfKeywords(KeywordTemporary, KeywordTable, KeywordView, KeywordFunction, KeywordDictionary, KeywordMaterialized) {
+				return nil, fmt.Errorf("expected keyword: TEMPORARY|TABLE|VIEW|FUNCTION|DICTIONARY|MATERIALIZED, but got %q", p.currentTokenString())
+			}
 		}
 		switch {
 		case p.matchKeyword(KeywordNamed):
@@ -28,7 +37,7 @@ func (p *Parser) parseDDL(pos Pos) (DDL, error) {
 		case p.matchKeyword(KeywordFunction):
 			return p.parseCreateFunction(pos, orReplace)
 		case p.matchKeyword(KeywordMaterialized):
-			return p.parseCreateMaterializedView(pos)
+			return p.parseCreateMaterializedView(pos, orReplace)
 		case p.matchKeyword(KeywordLive):
 			return p.parseCreateLiveView(pos)
 		case p.matchKeyword(KeywordView):
@@ -1211,6 +1220,7 @@ func (p *Parser) parseTTLClause(pos Pos, allowMultiValues bool) ([]*TTLExpr, err
 
 func (p *Parser) tryParseTTLPolicy(pos Pos) (*TTLPolicy, error) {
 	var rule *TTLPolicyRule
+	var where *WhereClause
 	switch {
 	case p.tryConsumeKeywords(KeywordTo):
 		if p.tryConsumeKeywords(KeywordDisk) {
@@ -1229,6 +1239,7 @@ func (p *Parser) tryParseTTLPolicy(pos Pos) (*TTLPolicy, error) {
 			return nil, fmt.Errorf("unexpected token: %q, expected DISK or VOLUME", p.currentTokenKind())
 		}
 	case p.matchKeyword(KeywordDelete), p.matchKeyword(KeywordRecompress):
+		isDelete := p.matchKeyword(KeywordDelete)
 		token := p.current()
 		_ = p.lexer.consumeToken()
 		action := &TTLPolicyRuleAction{
@@ -1242,23 +1253,128 @@ func (p *Parser) tryParseTTLPolicy(pos Pos) (*TTLPolicy, error) {
 		}
 		action.Codec = codec
 		rule = &TTLPolicyRule{RulePos: pos, Action: action}
+		// A TTL WHERE clause belongs only to the DELETE action; ClickHouse
+		// rejects it after RECOMPRESS, TO DISK/VOLUME, and GROUP BY, so it
+		// is left unconsumed for the statement parser in those cases.
+		if isDelete {
+			where, err = p.tryParseWhereClause(p.Pos())
+			if err != nil {
+				return nil, err
+			}
+		}
+	case p.matchKeyword(KeywordGroup):
+		groupBy, err := p.parseTTLPolicyGroupBy(pos)
+		if err != nil {
+			return nil, err
+		}
+		rule = groupBy
 	default:
 		return nil, nil // nolint
 	}
-	policy := &TTLPolicy{Item: rule}
+	return &TTLPolicy{Item: rule, Where: where}, nil
+}
 
-	where, err := p.tryParseWhereClause(p.Pos())
+// parseTTLPolicyGroupBy parses the TTL GROUP BY action: a plain key
+// expression list, optionally followed by SET <col> = <expr> assignments.
+//
+// ClickHouse rejects the query-level GROUP BY forms (ALL,
+// CUBE/ROLLUP/GROUPING SETS, WITH CUBE/ROLLUP/TOTALS) inside a TTL, so the
+// keys are parsed directly as a list instead of reusing parseGroupByClause
+// and then discarding those forms: building the clause from the expected
+// shape keeps any future query-level GROUP BY sugar out of the TTL grammar
+// as well.
+func (p *Parser) parseTTLPolicyGroupBy(pos Pos) (*TTLPolicyRule, error) {
+	if err := p.expectKeyword(KeywordGroup); err != nil {
+		return nil, err
+	}
+	if err := p.expectKeyword(KeywordBy); err != nil {
+		return nil, err
+	}
+	keys := &ColumnExprList{ListPos: p.Pos()}
+	for {
+		var key Expr
+		var err error
+		if p.matchTokenKind(TokenKindKeyword) {
+			// Bare keywords (e.g. ALL) are valid TTL GROUP BY keys even
+			// when followed by SET or a closing engine clause;
+			// parseColumnExpr only reads a keyword as an identifier for a
+			// narrower lookahead, so fall back to it when an expression
+			// cannot start here.
+			savedState := p.lexer.saveState()
+			key, err = p.parseExpr(p.Pos())
+			if err != nil {
+				p.lexer.restoreState(savedState)
+				key, err = p.parseAnyKeyword()
+			}
+		} else {
+			key, err = p.parseExpr(p.Pos())
+		}
+		if err != nil {
+			return nil, err
+		}
+		keys.Items = append(keys.Items, key)
+		keys.ListEnd = key.End()
+		if p.tryConsumeTokenKind(TokenKindComma) == nil {
+			break
+		}
+	}
+	rule := &TTLPolicyRule{
+		RulePos: pos,
+		GroupBy: &GroupByClause{
+			GroupByPos: pos,
+			GroupByEnd: keys.End(),
+			Expr:       keys,
+		},
+	}
+	if p.tryConsumeKeywords(KeywordSet) {
+		set, err := p.parseTTLPolicySet(p.Pos())
+		if err != nil {
+			return nil, err
+		}
+		rule.Set = append(rule.Set, set)
+		for {
+			// A comma either continues the SET assignment list or starts
+			// the next TTL expression of a multi-value TTL clause; consume
+			// it and probe for another assignment, rolling both back when
+			// none follows so parseTTLClause can treat the comma as a rule
+			// separator.
+			savedState := p.lexer.saveState()
+			if p.tryConsumeTokenKind(TokenKindComma) == nil {
+				break
+			}
+			set, err := p.parseTTLPolicySet(p.Pos())
+			if err != nil {
+				p.lexer.restoreState(savedState)
+				break
+			}
+			rule.Set = append(rule.Set, set)
+		}
+	}
+	return rule, nil
+}
+
+// parseTTLPolicySet parses one TTL SET assignment: <col> = <expr>.
+// Unlike parseUpdateAssignment, the right-hand side is read with full
+// expression precedence: a TTL SET has no trailing clause like the IN
+// PARTITION that bounds an ALTER TABLE UPDATE assignment, so expressions
+// such as `SET x = max(y) > 0` are valid here.
+func (p *Parser) parseTTLPolicySet(pos Pos) (*UpdateAssignment, error) {
+	column, err := p.ParseNestedIdentifier(p.Pos())
 	if err != nil {
 		return nil, err
 	}
-	policy.Where = where
-
-	groupBy, err := p.tryParseGroupByClause(p.Pos())
+	if err := p.expectTokenKind(TokenKindSingleEQ); err != nil {
+		return nil, err
+	}
+	expr, err := p.parseExpr(p.Pos())
 	if err != nil {
 		return nil, err
 	}
-	policy.GroupBy = groupBy
-	return policy, nil
+	return &UpdateAssignment{
+		AssignmentPos: pos,
+		Column:        column,
+		Expr:          expr,
+	}, nil
 }
 
 func (p *Parser) parseTTLExpr(pos Pos) (*TTLExpr, error) {
